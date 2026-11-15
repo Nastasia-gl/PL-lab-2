@@ -21,6 +21,7 @@ void parse_string(const char* input, Words* w);
 void count_letters(Words* w);
 long long word_value(Words* w, const char* word);
 bool check_sum(Words* w);
+bool check_partial_sum(Words* w);
 bool solve_rec(Words* w, int idx);
 bool solve(Words* w);
 void make_number(Words* w);
@@ -85,7 +86,6 @@ void count_letters(Words* w) {
     }
 }
 
-
 long long word_value(Words* w, const char* word) {
     long long v = 0;
     for (int i = 0; word[i] != '\0'; i++) {
@@ -107,6 +107,41 @@ bool check_sum(Words* w) {
     return res >= 0 && sum == res;
 }
 
+bool check_partial_sum(Words* w) {
+    int max_len = 0;
+    for (int i = 0; i <= w->count; i++) {
+        int len = (int)strlen(w->words[i]);
+        if (len > max_len) max_len = len;
+    }
+    int carry = 0;
+    for (int pos = 0; pos < max_len; pos++) {
+        int sum = carry;
+        bool col_complete = true; //у всех ли есть цифра в разряде
+        for (int i = 1; i <= w->count; i++) {
+            int len = (int)strlen(w->words[i]);
+            if (pos < len) {
+                int l = w->words[i][len - 1 - pos] - 'A';
+                if (w->val[l] < 0) { col_complete = false; break; }
+                sum += w->val[l];
+            }
+        }
+        if (!col_complete) return true;
+        int res_len = (int)strlen(w->words[0]);
+        if (pos < res_len) {
+            int l = w->words[0][res_len - 1 - pos] - 'A';
+            int res_digit = w->val[l];
+            if (res_digit < 0) return true;
+            if ((sum % 10) != res_digit) return false;
+        }
+        else {
+            if ((sum % 10) != 0) return false;
+        }
+        carry = sum / 10;
+    }
+    if (carry != 0) return false;
+    return true;
+}
+
 bool solve_rec(Words* w, int idx) {
     static int letters[26];
     static int nletters = -1;
@@ -115,16 +150,16 @@ bool solve_rec(Words* w, int idx) {
         for (int i = 0; i < 26; i++)
             if (symbols[i][1] == 1) letters[nletters++] = i;
     }
-
     if (idx == nletters) return check_sum(w);
-
     int l = letters[idx];
     for (int d = 0; d <= 9; d++) {
         if (w->used[d]) continue;
         if (d == 0 && w->leading[l]) continue;
         w->val[l] = d;
         w->used[d] = true;
-        if (solve_rec(w, idx + 1)) return true;
+        if (check_partial_sum(w)) {
+            if (solve_rec(w, idx + 1)) return true;
+        }
         w->val[l] = -1;
         w->used[d] = false;
     }
