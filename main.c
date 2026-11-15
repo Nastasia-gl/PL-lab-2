@@ -12,6 +12,7 @@ typedef struct {
     char words[MAX_TERMS][WORD_LEN]; // words[0] Ч результат
     int  val[26];                    // цифра дл€ буквы 
     bool used[10];                   // какие цифры уже зан€ты 
+    bool leading[26];                // маркер дл€ ведущих нулей
     long long numbers[MAX_TERMS];    
 } Words;
 
@@ -19,7 +20,6 @@ typedef struct {
 void parse_string(const char* input, Words* w);
 void count_letters(Words* w);
 long long word_value(Words* w, const char* word);
-bool is_leading(Words* w, int letter);
 bool check_sum(Words* w);
 bool solve_rec(Words* w, int idx);
 bool solve(Words* w);
@@ -69,6 +69,7 @@ void count_letters(Words* w) {
         symbols[i][1] = 0;
         symbols[i][2] = 0;
         w->val[i] = -1;
+        w->leading[i] = false;
     }
     for (int d = 0; d < 10; d++) w->used[d] = false;
 
@@ -77,6 +78,9 @@ void count_letters(Words* w) {
             int symb = w->words[i][j] - 'A';
             if (symb < 0 || symb > 25) continue;
             symbols[symb][1] = 1;
+        }
+        if (w->words[i][0] != '\0') {
+            w->leading[w->words[i][0] - 'A'] = true;
         }
     }
 }
@@ -90,14 +94,6 @@ long long word_value(Words* w, const char* word) {
         v = v * 10 + d;
     }
     return v;
-}
-
-bool is_leading(Words* w, int letter) {
-    for (int i = 0; i <= w->count; i++) {
-        if (w->words[i][0] != '\0' && (w->words[i][0] - 'A') == letter)
-            return true;
-    }
-    return false;
 }
 
 bool check_sum(Words* w) {
@@ -125,7 +121,7 @@ bool solve_rec(Words* w, int idx) {
     int l = letters[idx];
     for (int d = 0; d <= 9; d++) {
         if (w->used[d]) continue;
-        if (d == 0 && is_leading(w, l)) continue; 
+        if (d == 0 && w->leading[l]) continue;
         w->val[l] = d;
         w->used[d] = true;
         if (solve_rec(w, idx + 1)) return true;
