@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 #define WORD_LEN 16          
 #define MAX_TERMS 8         
@@ -13,7 +14,8 @@ typedef struct {
     int  val[26];                    // цифра для буквы 
     bool used[10];                   // какие цифры уже заняты 
     bool leading[26];                // маркер для ведущих нулей
-    long long numbers[MAX_TERMS];    
+    long long numbers[MAX_TERMS]; 
+    int word_lens[MAX_TERMS];
 } Words;
 
 
@@ -75,6 +77,7 @@ void count_letters(Words* w) {
     for (int d = 0; d < 10; d++) w->used[d] = false;
 
     for (int i = 0; i <= w->count; i++) {
+        w->word_lens[i] = (int)strlen(w->words[i]);
         for (int j = 0; w->words[i][j] != '\0'; j++) {
             int symb = w->words[i][j] - 'A';
             if (symb < 0 || symb > 25) continue;
@@ -110,7 +113,7 @@ bool check_sum(Words* w) {
 bool check_partial_sum(Words* w) {
     int max_len = 0;
     for (int i = 0; i <= w->count; i++) {
-        int len = (int)strlen(w->words[i]);
+        int len = w->word_lens[i];
         if (len > max_len) max_len = len;
     }
     int carry = 0;
@@ -118,7 +121,7 @@ bool check_partial_sum(Words* w) {
         int sum = carry;
         bool col_complete = true; //у всех ли есть цифра в разряде
         for (int i = 1; i <= w->count; i++) {
-            int len = (int)strlen(w->words[i]);
+            int len = w->word_lens[i];
             if (pos < len) {
                 int l = w->words[i][len - 1 - pos] - 'A';
                 if (w->val[l] < 0) { col_complete = false; break; }
@@ -126,7 +129,7 @@ bool check_partial_sum(Words* w) {
             }
         }
         if (!col_complete) return true;
-        int res_len = (int)strlen(w->words[0]);
+        int res_len = w->word_lens[0];
         if (pos < res_len) {
             int l = w->words[0][res_len - 1 - pos] - 'A';
             int res_digit = w->val[l];
@@ -192,8 +195,14 @@ int main(void) {
     parse_string(input, &w);
 
     count_letters(&w);
+    
+    clock_t start_time = clock();
 
-    if (!solve(&w)) {
+    bool found = solve(&w);
+
+    clock_t end_time = clock();
+
+    if (!found) {
         printf("No solution\n");
         return 1;
     }
@@ -204,5 +213,9 @@ int main(void) {
     printf("Solution: ");
     for (int i = 1; i < w.count; i++) printf("%lld + ", w.numbers[i]);
     printf("%lld = %lld\n", w.numbers[w.count], w.numbers[0]);
+
+    double time_spent = (double)(end_time - start_time) / CLOCKS_PER_SEC;
+    printf("Time: %.4f seconds\n", time_spent);
+
     return 0;
 }
